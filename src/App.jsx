@@ -17,6 +17,10 @@ import {
   Chip,
   Stack,
   TableContainer,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -44,6 +48,9 @@ function App() {
 
   // null = adding new; number = editing that expense id
   const [editingId, setEditingId] = useState(null);
+
+  // For row details popup
+  const [selectedExpense, setSelectedExpense] = useState(null);
 
   const fetchExpenses = async () => {
     setLoading(true);
@@ -130,6 +137,14 @@ function App() {
 
   const handleCancelEdit = () => {
     resetForm();
+  };
+
+  const handleRowClick = (expense) => {
+    setSelectedExpense(expense);
+  };
+
+  const handleCloseDialog = () => {
+    setSelectedExpense(null);
   };
 
   const totalAmount = expenses.reduce(
@@ -366,7 +381,12 @@ function App() {
             </TableHead>
             <TableBody>
               {expenses.map((e) => (
-                <TableRow key={e.id} hover>
+                <TableRow
+                  key={e.id}
+                  hover
+                  onClick={() => handleRowClick(e)}
+                  sx={{ cursor: "pointer" }}
+                >
                   <TableCell>{e.date}</TableCell>
                   <TableCell>{e.category}</TableCell>
                   <TableCell
@@ -385,15 +405,21 @@ function App() {
                   <TableCell align="center">
                     <IconButton
                       size="small"
-                      onClick={() => handleEdit(e)}
                       aria-label="edit"
+                      onClick={(event) => {
+                        event.stopPropagation(); // don't trigger row click
+                        handleEdit(e);
+                      }}
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
                     <IconButton
                       size="small"
-                      onClick={() => handleDelete(e.id)}
                       aria-label="delete"
+                      onClick={(event) => {
+                        event.stopPropagation(); // don't trigger row click
+                        handleDelete(e.id);
+                      }}
                     >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
@@ -413,6 +439,58 @@ function App() {
           </Table>
         </TableContainer>
       </Paper>
+
+      {/* Row Details Dialog */}
+      <Dialog
+        open={Boolean(selectedExpense)}
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Expense Details</DialogTitle>
+        <DialogContent dividers>
+          {selectedExpense && (
+            <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Date
+                </Typography>
+                <Typography variant="body1">{selectedExpense.date}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Category
+                </Typography>
+                <Typography variant="body1">
+                  {selectedExpense.category}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Description
+                </Typography>
+                <Typography variant="body1">
+                  {selectedExpense.description || "(No description)"}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Amount
+                </Typography>
+                <Typography variant="body1">
+                  ₹{Number(selectedExpense.amount).toFixed(2)}
+                </Typography>
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
