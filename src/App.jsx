@@ -16,6 +16,7 @@ import {
   Divider,
   Chip,
   Stack,
+  TableContainer,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -111,7 +112,6 @@ function App() {
       await api.delete(`/expenses/${id}`);
       await fetchExpenses();
       await fetchSummary();
-      // If deleting the one you're editing, reset form
       if (editingId === id) {
         resetForm();
       }
@@ -138,34 +138,58 @@ function App() {
   );
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
+    <Container
+      maxWidth="md"
+      sx={{
+        py: { xs: 2, sm: 4 },
+        px: { xs: 1, sm: 2 },
+      }}
+    >
+      <Typography
+        variant="h5"
+        gutterBottom
+        sx={{ fontWeight: 600, textAlign: { xs: "center", sm: "left" } }}
+      >
         Expense Tracker
       </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        gutterBottom
+        sx={{ textAlign: { xs: "center", sm: "left" }, mb: 2 }}
+      >
         Simple daily expense tracker – Python + React + MUI
       </Typography>
 
       {/* Add / Edit Expense Form */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={3}>
+      <Paper
+        sx={{
+          p: { xs: 1.5, sm: 2 },
+          mb: { xs: 2, sm: 3 },
+        }}
+        elevation={3}
+      >
         <Box
           sx={{
             display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
             justifyContent: "space-between",
             mb: 1,
-            alignItems: "center",
+            gap: { xs: 0.5, sm: 0 },
           }}
         >
-          <Typography variant="h6">
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             {editingId === null ? "Add Expense" : "Edit Expense"}
           </Typography>
           {editingId !== null && (
-            <Chip
-              label={`Editing #${editingId}`}
-              size="small"
-              color="secondary"
-              variant="outlined"
-            />
+            <Box sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
+              <Chip
+                label={`Editing #${editingId}`}
+                size="small"
+                color="secondary"
+                variant="outlined"
+              />
+            </Box>
           )}
         </Box>
 
@@ -174,8 +198,8 @@ function App() {
           onSubmit={handleSubmit}
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(4, 1fr)" },
-            gap: 2,
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(4, minmax(0, 1fr))" },
+            gap: { xs: 1.5, sm: 2 },
             alignItems: "center",
           }}
         >
@@ -186,6 +210,8 @@ function App() {
             onChange={(e) => setDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
             required
+            fullWidth
+            size="small"
           />
           <TextField
             select
@@ -193,6 +219,8 @@ function App() {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             required
+            fullWidth
+            size="small"
           >
             {DEFAULT_CATEGORIES.map((cat) => (
               <MenuItem key={cat} value={cat}>
@@ -204,6 +232,8 @@ function App() {
             label="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            size="small"
           />
           <TextField
             label="Amount"
@@ -212,22 +242,36 @@ function App() {
             onChange={(e) => setAmount(e.target.value)}
             inputProps={{ step: "0.01" }}
             required
+            fullWidth
+            size="small"
           />
 
           <Box
             sx={{
-              gridColumn: { xs: "1 / -1", sm: "1 / -1" },
+              gridColumn: "1 / -1",
               display: "flex",
+              flexDirection: { xs: "column-reverse", sm: "row" },
               justifyContent: "flex-end",
               gap: 1,
+              mt: { xs: 0.5, sm: 1 },
             }}
           >
             {editingId !== null && (
-              <Button variant="text" onClick={handleCancelEdit}>
+              <Button
+                variant="text"
+                onClick={handleCancelEdit}
+                fullWidth={true}
+                sx={{ maxWidth: { xs: "100%", sm: "auto" } }}
+              >
                 Cancel
               </Button>
             )}
-            <Button type="submit" variant="contained">
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth={true}
+              sx={{ maxWidth: { xs: "100%", sm: "auto" } }}
+            >
               {editingId === null ? "Add" : "Update"}
             </Button>
           </Box>
@@ -235,8 +279,14 @@ function App() {
       </Paper>
 
       {/* Summary */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>
+      <Paper
+        sx={{
+          p: { xs: 1.5, sm: 2 },
+          mb: { xs: 2, sm: 3 },
+        }}
+        elevation={2}
+      >
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
           Summary
         </Typography>
         <Stack
@@ -250,22 +300,43 @@ function App() {
             label={`Total: ₹${totalAmount.toFixed(2)}`}
             color="primary"
             variant="filled"
+            size="small"
           />
           {summary.map((s) => (
             <Chip
               key={s.category}
               label={`${s.category}: ₹${Number(s.total).toFixed(2)}`}
               variant="outlined"
+              size="small"
             />
           ))}
         </Stack>
       </Paper>
 
       {/* Expenses Table */}
-      <Paper sx={{ p: 2 }} elevation={2}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-          <Typography variant="h6">Recent Expenses</Typography>
-          <Typography variant="body2" color="text.secondary">
+      <Paper
+        sx={{
+          p: { xs: 1, sm: 2 },
+        }}
+        elevation={2}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            justifyContent: "space-between",
+            mb: 1,
+            gap: { xs: 0.5, sm: 0 },
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Recent Expenses
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ textAlign: { xs: "left", sm: "right" } }}
+          >
             {loading
               ? "Loading..."
               : `${expenses.length} item${expenses.length !== 1 ? "s" : ""}`}
@@ -273,52 +344,74 @@ function App() {
         </Box>
         <Divider sx={{ mb: 1 }} />
 
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell align="right">Amount (₹)</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {expenses.map((e) => (
-              <TableRow key={e.id} hover>
-                <TableCell>{e.date}</TableCell>
-                <TableCell>{e.category}</TableCell>
-                <TableCell>{e.description}</TableCell>
-                <TableCell align="right">
-                  {Number(e.amount).toFixed(2)}
-                </TableCell>
-                <TableCell align="center">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEdit(e)}
-                    aria-label="edit"
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(e.id)}
-                    aria-label="delete"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-            {expenses.length === 0 && !loading && (
+        <TableContainer
+          sx={{
+            maxHeight: { xs: "55vh", sm: "60vh" },
+            overflowX: "auto",
+          }}
+        >
+          <Table size="small" stickyHeader>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No expenses yet. Add your first one above.
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Date</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>Category</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                  Amount (₹)
+                </TableCell>
+                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                  Actions
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {expenses.map((e) => (
+                <TableRow key={e.id} hover>
+                  <TableCell>{e.date}</TableCell>
+                  <TableCell>{e.category}</TableCell>
+                  <TableCell
+                    sx={{
+                      maxWidth: { xs: 120, sm: "auto" },
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {e.description}
+                  </TableCell>
+                  <TableCell align="right">
+                    {Number(e.amount).toFixed(2)}
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEdit(e)}
+                      aria-label="edit"
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(e.id)}
+                      aria-label="delete"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {expenses.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    <Typography variant="caption">
+                      No expenses yet. Add your first one above.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Paper>
     </Container>
   );
