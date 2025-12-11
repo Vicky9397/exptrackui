@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Container,
   Typography,
@@ -35,10 +35,24 @@ const DEFAULT_CATEGORIES = [
   "Other",
 ];
 
+const MONTHS = [
+  { value: "", label: "All" },
+  { value: "01", label: "Jan" },
+  { value: "02", label: "Feb" },
+  { value: "03", label: "Mar" },
+  { value: "04", label: "Apr" },
+  { value: "05", label: "May" },
+  { value: "06", label: "Jun" },
+  { value: "07", label: "Jul" },
+  { value: "08", label: "Aug" },
+  { value: "09", label: "Sep" },
+  { value: "10", label: "Oct" },
+  { value: "11", label: "Nov" },
+  { value: "12", label: "Dec" },
+];
+
 function App() {
-  const [date, setDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [category, setCategory] = useState("Food");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -51,6 +65,13 @@ function App() {
 
   // For row details popup
   const [selectedExpense, setSelectedExpense] = useState(null);
+
+  // --- FILTER STATES ---
+  const [filterCategory, setFilterCategory] = useState(""); // "" = all
+  const [filterMonth, setFilterMonth] = useState(""); // "" = all
+  const [filterYear, setFilterYear] = useState(""); // "" = all
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   const fetchExpenses = async () => {
     setLoading(true);
@@ -147,10 +168,66 @@ function App() {
     setSelectedExpense(null);
   };
 
-  const totalAmount = expenses.reduce(
-    (sum, e) => sum + Number(e.amount || 0),
-    0
-  );
+  // Helper to safely read YYYY and MM from an expense date string
+  const getYearMonth = (dateStr) => {
+    // expecting ISO yyyy-mm-dd or similar
+    if (!dateStr) return { year: "", month: "" };
+    const parts = dateStr.split("-");
+    if (parts.length >= 2) {
+      return { year: parts[0], month: parts[1] };
+    }
+    try {
+      const d = new Date(dateStr);
+      return { year: String(d.getFullYear()), month: String(d.getMonth() + 1).padStart(2, "0") };
+    } catch (e) {
+      return { year: "", month: "" };
+    }
+  };
+
+  // Derived filtered list (client-side filtering)
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter((e) => {
+      // category filter
+      if (filterCategory && e.category !== filterCategory) return false;
+
+      // month/year filter
+      const { year, month } = getYearMonth(e.date);
+      if (filterYear && filterYear !== year) return false;
+      if (filterMonth && filterMonth !== month) return false;
+
+      // date range filter (from/to inclusive)
+      if (filterDateFrom) {
+        // compare as strings yyyy-mm-dd works lexicographically
+        if (e.date < filterDateFrom) return false;
+      }
+      if (filterDateTo) {
+        if (e.date > filterDateTo) return false;
+      }
+
+      return true;
+    });
+  }, [expenses, filterCategory, filterMonth, filterYear, filterDateFrom, filterDateTo]);
+
+  // totals for filtered data
+  const totalAmount = filteredExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+  const clearFilters = () => {
+    setFilterCategory("");
+    setFilterMonth("");
+    setFilterYear("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  };
+
+  // Build year options from existing expenses so the dropdown is relevant
+  const yearOptions = useMemo(() => {
+    const years = new Set();
+    expenses.forEach((e) => {
+      const { year } = getYearMonth(e.date);
+      if (year) years.add(year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [expenses]);
 
   return (
     <Container
@@ -177,261 +254,154 @@ function App() {
       </Typography>
 
       {/* Add / Edit Expense Form */}
-      <Paper
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          mb: { xs: 2, sm: 3 },
-        }}
-        elevation={3}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            mb: 1,
-            gap: { xs: 0.5, sm: 0 },
-          }}
-        >
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }} elevation={3}>
+        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             {editingId === null ? "Add Expense" : "Edit Expense"}
           </Typography>
           {editingId !== null && (
             <Box sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
-              <Chip
-                label={`Editing #${editingId}`}
-                size="small"
-                color="secondary"
-                variant="outlined"
-              />
+              <Chip label={`Editing #${editingId}`} size="small" color="secondary" variant="outlined" />
             </Box>
           )}
         </Box>
 
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(4, minmax(0, 1fr))" },
-            gap: { xs: 1.5, sm: 2 },
-            alignItems: "center",
-          }}
-        >
-          <TextField
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            required
-            fullWidth
-            size="small"
-          />
-          <TextField
-            select
-            label="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-            fullWidth
-            size="small"
-          >
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(4, minmax(0, 1fr))" }, gap: { xs: 1.5, sm: 2 }, alignItems: "center" }}>
+          <TextField label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} InputLabelProps={{ shrink: true }} required fullWidth size="small" />
+          <TextField select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required fullWidth size="small">
             {DEFAULT_CATEGORIES.map((cat) => (
               <MenuItem key={cat} value={cat}>
                 {cat}
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Amount"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            inputProps={{ step: "0.01" }}
-            required
-            fullWidth
-            size="small"
-          />
+          <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth size="small" />
+          <TextField label="Amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} inputProps={{ step: "0.01" }} required fullWidth size="small" />
 
-          <Box
-            sx={{
-              gridColumn: "1 / -1",
-              display: "flex",
-              flexDirection: { xs: "column-reverse", sm: "row" },
-              justifyContent: "flex-end",
-              gap: 1,
-              mt: { xs: 0.5, sm: 1 },
-            }}
-          >
+          <Box sx={{ gridColumn: "1 / -1", display: "flex", flexDirection: { xs: "column-reverse", sm: "row" }, justifyContent: "flex-end", gap: 1, mt: { xs: 0.5, sm: 1 } }}>
             {editingId !== null && (
-              <Button
-                variant="text"
-                onClick={handleCancelEdit}
-                fullWidth={true}
-                sx={{ maxWidth: { xs: "100%", sm: "auto" } }}
-              >
+              <Button variant="text" onClick={handleCancelEdit} fullWidth={true} sx={{ maxWidth: { xs: "100%", sm: "auto" } }}>
                 Cancel
               </Button>
             )}
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth={true}
-              sx={{ maxWidth: { xs: "100%", sm: "auto" } }}
-            >
+            <Button type="submit" variant="contained" fullWidth={true} sx={{ maxWidth: { xs: "100%", sm: "auto" } }}>
               {editingId === null ? "Add" : "Update"}
             </Button>
           </Box>
         </Box>
       </Paper>
 
-      {/* Summary */}
-      <Paper
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          mb: { xs: 2, sm: 3 },
-        }}
-        elevation={2}
-      >
+      {/* Filters Panel */}
+      <Paper sx={{ p: { xs: 1, sm: 2 }, mb: { xs: 2, sm: 3 } }} elevation={2}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+          Filters
+        </Typography>
+        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(5, minmax(0, 1fr))" } }}>
+          <TextField select label="Category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} size="small">
+            <MenuItem value="">All</MenuItem>
+            {DEFAULT_CATEGORIES.map((cat) => (
+              <MenuItem key={cat} value={cat}>
+                {cat}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField select label="Month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} size="small">
+            {MONTHS.map((m) => (
+              <MenuItem key={m.value} value={m.value}>
+                {m.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField select label="Year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} size="small">
+            <MenuItem value="">All</MenuItem>
+            {yearOptions.map((y) => (
+              <MenuItem key={y} value={y}>
+                {y}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField label="From" type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+
+          <TextField label="To" type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+
+          <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1, justifyContent: "flex-end" }}>
+            <Button onClick={clearFilters} variant="outlined" size="small">
+              Clear
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* Summary (reflects filtered data) */}
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }} elevation={2}>
         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
           Summary
         </Typography>
-        <Stack
-          direction="row"
-          flexWrap="wrap"
-          spacing={1}
-          useFlexGap
-          sx={{ mb: 1 }}
-        >
-          <Chip
-            label={`Total: ₹${totalAmount.toFixed(2)}`}
-            color="primary"
-            variant="filled"
-            size="small"
-          />
-          {summary.map((s) => (
-            <Chip
-              key={s.category}
-              label={`${s.category}: ₹${Number(s.total).toFixed(2)}`}
-              variant="outlined"
-              size="small"
-            />
+        <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap sx={{ mb: 1 }}>
+          <Chip label={`Total: ₹${totalAmount.toFixed(2)}`} color="primary" variant="filled" size="small" />
+          {/* show per-category totals for filtered data */}
+          {Array.from(
+            filteredExpenses.reduce((map, e) => {
+              const prev = map.get(e.category) || 0;
+              map.set(e.category, prev + Number(e.amount || 0));
+              return map;
+            }, new Map())
+          ).map(([cat, tot]) => (
+            <Chip key={cat} label={`${cat}: ₹${tot.toFixed(2)}`} variant="outlined" size="small" />
           ))}
         </Stack>
+        <Typography variant="caption" color="text.secondary">
+          Showing {filteredExpenses.length} of {expenses.length} item{expenses.length !== 1 ? "s" : ""}
+        </Typography>
       </Paper>
 
-      {/* Expenses Table */}
-      <Paper
-        sx={{
-          p: { xs: 1, sm: 2 },
-        }}
-        elevation={2}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            mb: 1,
-            gap: { xs: 0.5, sm: 0 },
-          }}
-        >
+      {/* Expenses Table (shows filteredExpenses) */}
+      <Paper sx={{ p: { xs: 1, sm: 2 } }} elevation={2}>
+        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Recent Expenses
           </Typography>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ textAlign: { xs: "left", sm: "right" } }}
-          >
-            {loading
-              ? "Loading..."
-              : `${expenses.length} item${expenses.length !== 1 ? "s" : ""}`}
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: { xs: "left", sm: "right" } }}>
+            {loading ? "Loading..." : `${filteredExpenses.length} item${filteredExpenses.length !== 1 ? "s" : ""}`}
           </Typography>
         </Box>
         <Divider sx={{ mb: 1 }} />
 
-        <TableContainer
-          sx={{
-            maxHeight: { xs: "55vh", sm: "60vh" },
-            overflowX: "auto",
-          }}
-        >
+        <TableContainer sx={{ maxHeight: { xs: "55vh", sm: "60vh" }, overflowX: "auto" }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Date</TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>Category</TableCell>
                 <TableCell>Description</TableCell>
-                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                  Amount (₹)
-                </TableCell>
-                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
-                  Actions
-                </TableCell>
+                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>Amount (₹)</TableCell>
+                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {expenses.map((e) => (
-                <TableRow
-                  key={e.id}
-                  hover
-                  onClick={() => handleRowClick(e)}
-                  sx={{ cursor: "pointer" }}
-                >
+              {filteredExpenses.map((e) => (
+                <TableRow key={e.id} hover onClick={() => handleRowClick(e)} sx={{ cursor: "pointer" }}>
                   <TableCell>{e.date}</TableCell>
                   <TableCell>{e.category}</TableCell>
-                  <TableCell
-                    sx={{
-                      maxWidth: { xs: 120, sm: "auto" },
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {e.description}
-                  </TableCell>
-                  <TableCell align="right">
-                    {Number(e.amount).toFixed(2)}
-                  </TableCell>
+                  <TableCell sx={{ maxWidth: { xs: 120, sm: "auto" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</TableCell>
+                  <TableCell align="right">{Number(e.amount).toFixed(2)}</TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      aria-label="edit"
-                      onClick={(event) => {
-                        event.stopPropagation(); // don't trigger row click
-                        handleEdit(e);
-                      }}
-                    >
+                    <IconButton size="small" aria-label="edit" onClick={(event) => { event.stopPropagation(); handleEdit(e); }}>
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      aria-label="delete"
-                      onClick={(event) => {
-                        event.stopPropagation(); // don't trigger row click
-                        handleDelete(e.id);
-                      }}
-                    >
+                    <IconButton size="small" aria-label="delete" onClick={(event) => { event.stopPropagation(); handleDelete(e.id); }}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
-              {expenses.length === 0 && !loading && (
+              {filteredExpenses.length === 0 && !loading && (
                 <TableRow>
                   <TableCell colSpan={5} align="center">
-                    <Typography variant="caption">
-                      No expenses yet. Add your first one above.
-                    </Typography>
+                    <Typography variant="caption">No expenses for selected filters.</Typography>
                   </TableCell>
                 </TableRow>
               )}
@@ -441,48 +411,29 @@ function App() {
       </Paper>
 
       {/* Row Details Dialog */}
-      <Dialog
-        open={Boolean(selectedExpense)}
-        onClose={handleCloseDialog}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={Boolean(selectedExpense)} onClose={handleCloseDialog} fullWidth maxWidth="xs">
         <DialogTitle>Expense Details</DialogTitle>
         <DialogContent dividers>
           {selectedExpense && (
             <Stack spacing={1.5} sx={{ mt: 0.5 }}>
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Date
-                </Typography>
+                <Typography variant="caption" color="text.secondary">Date</Typography>
                 <Typography variant="body1">{selectedExpense.date}</Typography>
               </Box>
 
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Category
-                </Typography>
-                <Typography variant="body1">
-                  {selectedExpense.category}
-                </Typography>
+                <Typography variant="caption" color="text.secondary">Category</Typography>
+                <Typography variant="body1">{selectedExpense.category}</Typography>
               </Box>
 
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Description
-                </Typography>
-                <Typography variant="body1">
-                  {selectedExpense.description || "(No description)"}
-                </Typography>
+                <Typography variant="caption" color="text.secondary">Description</Typography>
+                <Typography variant="body1">{selectedExpense.description || "(No description)"}</Typography>
               </Box>
 
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Amount
-                </Typography>
-                <Typography variant="body1">
-                  ₹{Number(selectedExpense.amount).toFixed(2)}
-                </Typography>
+                <Typography variant="caption" color="text.secondary">Amount</Typography>
+                <Typography variant="body1">₹{Number(selectedExpense.amount).toFixed(2)}</Typography>
               </Box>
             </Stack>
           )}
