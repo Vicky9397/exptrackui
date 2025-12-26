@@ -25,6 +25,9 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { api } from "./api";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 
 const DEFAULT_CATEGORIES = [
   "Food",
@@ -229,6 +232,58 @@ function App() {
     return Array.from(years).sort((a, b) => b - a);
   }, [expenses]);
 
+  const categoryChartData = useMemo(() => {
+  const map = {};
+  filteredExpenses.forEach((e) => {
+    map[e.category] = (map[e.category] || 0) + Number(e.amount || 0);
+  });
+
+  return Object.entries(map).map(([name, value]) => ({
+    name,
+    value,
+  }));
+}, [filteredExpenses]);
+
+const monthlyData = useMemo(() => {
+  const map = {};
+  filteredExpenses.forEach((e) => {
+    const [year, month] = e.date.split("-");
+    const key = `${year}-${month}`;
+
+    if (!map[key]) {
+      map[key] = { total: 0, daily: {} };
+    }
+
+    map[key].total += Number(e.amount || 0);
+    map[key].daily[e.date] =
+      (map[key].daily[e.date] || 0) + Number(e.amount || 0);
+  });
+
+  return map;
+}, [filteredExpenses]);
+
+
+const getDayPercentage = (date) => {
+  const [year, month] = date.toISOString().slice(0, 7).split("-");
+  const key = `${year}-${month}`;
+  const dateKey = date.toISOString().slice(0, 10);
+
+  const monthData = monthlyData[key];
+  if (!monthData || !monthData.total) return 0;
+
+  const dayAmount = monthData.daily[dateKey] || 0;
+  return (dayAmount / monthData.total) * 100;
+};
+
+
+const getTileColorByPercentage = (percent) => {
+  if (percent === 0) return null;
+  if (percent < 5) return "#e3f2fd";
+  if (percent < 10) return "#90caf9";
+  if (percent < 20) return "#42a5f5";
+  return "#1565c0";
+};
+
   return (
     <Container
       maxWidth="md"
@@ -357,6 +412,82 @@ function App() {
           Showing {filteredExpenses.length} of {expenses.length} item{expenses.length !== 1 ? "s" : ""}
         </Typography>
       </Paper>
+
+      {/* pie chart */}
+      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
+  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+    Expenses by Category
+  </Typography>
+
+  {categoryChartData.length === 0 ? (
+    <Typography variant="caption">No data</Typography>
+  ) : (
+    <ResponsiveContainer width="100%" height={250}>
+      <PieChart>
+        <Pie
+          data={categoryChartData}
+          dataKey="value"
+          nameKey="name"
+          outerRadius={90}
+          label
+        >
+          {categoryChartData.map((_, index) => (
+            <Cell
+              key={index}
+              fill={[
+                "#1976d2",
+                "#9c27b0",
+                "#ff9800",
+                "#4caf50",
+                "#f44336",
+                "#607d8b",
+              ][index % 6]}
+            />
+          ))}
+        </Pie>
+        <Tooltip formatter={(v) => `₹${v.toFixed(2)}`} />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  )}
+</Paper>
+
+      {/* calendar view */}
+      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
+  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+    Monthly Expense Calendar
+  </Typography>
+
+  <Calendar
+  view="month"
+  tileStyle={({ date }) => {
+    const percent = getDayPercentage(date);
+    const color = getTileColorByPercentage(percent);
+
+    return color
+      ? {
+          backgroundColor: color,
+          color: "#000",
+          borderRadius: 6,
+        }
+      : null;
+  }}
+  tileContent={({ date }) => {
+    const percent = getDayPercentage(date);
+    if (!percent) return null;
+
+    return (
+      <Box title={`${percent.toFixed(1)}% of monthly spend`}>
+        <Typography variant="caption">
+          {percent.toFixed(1)}%
+        </Typography>
+      </Box>
+    );
+  }}
+/>
+
+</Paper>
+
 
       {/* Expenses Table (shows filteredExpenses) */}
       <Paper sx={{ p: { xs: 1, sm: 2 } }} elevation={2}>
