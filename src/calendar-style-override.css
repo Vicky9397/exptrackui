@@ -1,0 +1,29 @@
+/* override react-calendar defaults */
+.react-calendar__tile.high-spend {
+  background: #1565c0 !important;
+  color: #fff;
+  border-radius: 6px;
+}
+
+.react-calendar__tile.medium-spend {
+  background: #42a5f5 !important;
+  color: #000;
+  border-radius: 6px;
+}
+
+.react-calendar__tile.low-spend {
+  background: #90caf9 !important;
+  color: #000;
+  border-radius: 6px;
+}
+
+.react-calendar__tile.very-low-spend {
+  background: #e3f2fd !important;
+  color: #000;
+  border-radius: 6px;
+}
+
+/* prevent hover from wiping colors */
+.react-calendar__tile:hover {
+  background-color: inherit !important;
+}

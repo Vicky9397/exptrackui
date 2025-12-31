@@ -28,6 +28,7 @@ import { api } from "./api";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import "./calendar-style-override.css";
 
 const DEFAULT_CATEGORIES = [
   "Food",
@@ -263,17 +264,27 @@ const monthlyData = useMemo(() => {
 }, [filteredExpenses]);
 
 
+const toLocalDateKey = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const getDayPercentage = (date) => {
-  const [year, month] = date.toISOString().slice(0, 7).split("-");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const key = `${year}-${month}`;
-  const dateKey = date.toISOString().slice(0, 10);
+
+  const dateKey = toLocalDateKey(date);
 
   const monthData = monthlyData[key];
   if (!monthData || !monthData.total) return 0;
 
   const dayAmount = monthData.daily[dateKey] || 0;
-  return (dayAmount / monthData.total) * 100;
+  return {p: (dayAmount / monthData.total) * 100, a: dayAmount};
 };
+
 
 
 const getTileColorByPercentage = (percent) => {
@@ -460,26 +471,24 @@ const getTileColorByPercentage = (percent) => {
 
   <Calendar
   view="month"
-  tileStyle={({ date }) => {
-    const percent = getDayPercentage(date);
-    const color = getTileColorByPercentage(percent);
+  tileClassName={({ date }) => {
+    const dayData = getDayPercentage(date);
 
-    return color
-      ? {
-          backgroundColor: color,
-          color: "#000",
-          borderRadius: 6,
-        }
-      : null;
+    if (dayData.p >= 20) return "high-spend";
+    if (dayData.p >= 10) return "medium-spend";
+    if (dayData.p >= 5) return "low-spend";
+    if (dayData.p > 0) return "very-low-spend";
+
+    return null;
   }}
   tileContent={({ date }) => {
-    const percent = getDayPercentage(date);
-    if (!percent) return null;
+    const dayData = getDayPercentage(date);
+    if (!dayData.p) return null;
 
     return (
-      <Box title={`${percent.toFixed(1)}% of monthly spend`}>
+      <Box title={`${dayData.p.toFixed(1)}% of monthly spend (₹ ${dayData.a.toFixed(2)})`}>
         <Typography variant="caption">
-          {percent.toFixed(1)}%
+          {dayData.p.toFixed(1)}%
         </Typography>
       </Box>
     );
