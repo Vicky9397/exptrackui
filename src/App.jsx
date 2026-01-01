@@ -70,10 +70,14 @@ function App() {
   // For row details popup
   const [selectedExpense, setSelectedExpense] = useState(null);
 
+  const today = new Date();
+const CURRENT_MONTH = String(today.getMonth() + 1).padStart(2, "0");
+const CURRENT_YEAR = String(today.getFullYear());
+
   // --- FILTER STATES ---
   const [filterCategory, setFilterCategory] = useState(""); // "" = all
-  const [filterMonth, setFilterMonth] = useState(""); // "" = all
-  const [filterYear, setFilterYear] = useState(""); // "" = all
+  const [filterMonth, setFilterMonth] = useState(CURRENT_MONTH); // "" = all
+  const [filterYear, setFilterYear] = useState(CURRENT_YEAR); // "" = all
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
@@ -217,21 +221,29 @@ function App() {
 
   const clearFilters = () => {
     setFilterCategory("");
-    setFilterMonth("");
-    setFilterYear("");
+    setFilterMonth(CURRENT_MONTH);
+    setFilterYear(CURRENT_YEAR);
     setFilterDateFrom("");
     setFilterDateTo("");
   };
 
   // Build year options from existing expenses so the dropdown is relevant
   const yearOptions = useMemo(() => {
-    const years = new Set();
-    expenses.forEach((e) => {
-      const { year } = getYearMonth(e.date);
-      if (year) years.add(year);
-    });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [expenses]);
+  const years = new Set();
+
+  // years from expense data
+  expenses.forEach((e) => {
+    const { year } = getYearMonth(e.date);
+    if (year) years.add(year);
+  });
+
+  // ALWAYS include current year
+  const currentYear = String(new Date().getFullYear());
+  years.add(currentYear);
+
+  return Array.from(years).sort((a, b) => b - a);
+}, [expenses]);
+
 
   const categoryChartData = useMemo(() => {
   const map = {};
