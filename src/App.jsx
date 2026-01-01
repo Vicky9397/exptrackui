@@ -192,6 +192,15 @@ const CURRENT_YEAR = String(today.getFullYear());
     }
   };
 
+  const monthlyExpenses = useMemo(() => {
+  if (!filterMonth || !filterYear) return [];
+
+  return expenses.filter((e) => {
+    const { year, month } = getYearMonth(e.date);
+    return year === filterYear && month === filterMonth;
+  });
+}, [expenses, filterMonth, filterYear]);
+
   // Derived filtered list (client-side filtering)
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
@@ -432,7 +441,7 @@ const getTileColorByPercentage = (percent) => {
           ))}
         </Stack>
         <Typography variant="caption" color="text.secondary">
-          Showing {filteredExpenses.length} of {expenses.length} item{expenses.length !== 1 ? "s" : ""}
+          Showing {filteredExpenses.length} of {monthlyExpenses.length} item{monthlyExpenses.length !== 1 ? "s" : ""}
         </Typography>
       </Paper>
 
