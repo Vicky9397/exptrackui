@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Container,
   Typography,
   Box,
   TextField,
@@ -29,6 +28,8 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recha
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./calendar-style-override.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+
 
 const DEFAULT_CATEGORIES = [
   "Food",
@@ -71,8 +72,8 @@ function App() {
   const [selectedExpense, setSelectedExpense] = useState(null);
 
   const today = new Date();
-const CURRENT_MONTH = String(today.getMonth() + 1).padStart(2, "0");
-const CURRENT_YEAR = String(today.getFullYear());
+  const CURRENT_MONTH = String(today.getMonth() + 1).padStart(2, "0");
+  const CURRENT_YEAR = String(today.getFullYear());
 
   // --- FILTER STATES ---
   const [filterCategory, setFilterCategory] = useState(""); // "" = all
@@ -193,13 +194,13 @@ const CURRENT_YEAR = String(today.getFullYear());
   };
 
   const monthlyExpenses = useMemo(() => {
-  if (!filterMonth || !filterYear) return [];
+    if (!filterMonth || !filterYear) return [];
 
-  return expenses.filter((e) => {
-    const { year, month } = getYearMonth(e.date);
-    return year === filterYear && month === filterMonth;
-  });
-}, [expenses, filterMonth, filterYear]);
+    return expenses.filter((e) => {
+      const { year, month } = getYearMonth(e.date);
+      return year === filterYear && month === filterMonth;
+    });
+  }, [expenses, filterMonth, filterYear]);
 
   // Derived filtered list (client-side filtering)
   const filteredExpenses = useMemo(() => {
@@ -238,91 +239,77 @@ const CURRENT_YEAR = String(today.getFullYear());
 
   // Build year options from existing expenses so the dropdown is relevant
   const yearOptions = useMemo(() => {
-  const years = new Set();
+    const years = new Set();
 
-  // years from expense data
-  expenses.forEach((e) => {
-    const { year } = getYearMonth(e.date);
-    if (year) years.add(year);
-  });
+    // years from expense data
+    expenses.forEach((e) => {
+      const { year } = getYearMonth(e.date);
+      if (year) years.add(year);
+    });
 
-  // ALWAYS include current year
-  const currentYear = String(new Date().getFullYear());
-  years.add(currentYear);
+    // ALWAYS include current year
+    const currentYear = String(new Date().getFullYear());
+    years.add(currentYear);
 
-  return Array.from(years).sort((a, b) => b - a);
-}, [expenses]);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [expenses]);
 
 
   const categoryChartData = useMemo(() => {
-  const map = {};
-  filteredExpenses.forEach((e) => {
-    map[e.category] = (map[e.category] || 0) + Number(e.amount || 0);
-  });
+    const map = {};
+    filteredExpenses.forEach((e) => {
+      map[e.category] = (map[e.category] || 0) + Number(e.amount || 0);
+    });
 
-  return Object.entries(map).map(([name, value]) => ({
-    name,
-    value,
-  }));
-}, [filteredExpenses]);
+    return Object.entries(map).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  }, [filteredExpenses]);
 
-const monthlyData = useMemo(() => {
-  const map = {};
-  filteredExpenses.forEach((e) => {
-    const [year, month] = e.date.split("-");
+  const monthlyData = useMemo(() => {
+    const map = {};
+    filteredExpenses.forEach((e) => {
+      const [year, month] = e.date.split("-");
+      const key = `${year}-${month}`;
+
+      if (!map[key]) {
+        map[key] = { total: 0, daily: {} };
+      }
+
+      map[key].total += Number(e.amount || 0);
+      map[key].daily[e.date] =
+        (map[key].daily[e.date] || 0) + Number(e.amount || 0);
+    });
+
+    return map;
+  }, [filteredExpenses]);
+
+
+  const toLocalDateKey = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const getDayPercentage = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const key = `${year}-${month}`;
 
-    if (!map[key]) {
-      map[key] = { total: 0, daily: {} };
-    }
+    const dateKey = toLocalDateKey(date);
 
-    map[key].total += Number(e.amount || 0);
-    map[key].daily[e.date] =
-      (map[key].daily[e.date] || 0) + Number(e.amount || 0);
-  });
+    const monthData = monthlyData[key];
+    if (!monthData || !monthData.total) return 0;
 
-  return map;
-}, [filteredExpenses]);
-
-
-const toLocalDateKey = (date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
-const getDayPercentage = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const key = `${year}-${month}`;
-
-  const dateKey = toLocalDateKey(date);
-
-  const monthData = monthlyData[key];
-  if (!monthData || !monthData.total) return 0;
-
-  const dayAmount = monthData.daily[dateKey] || 0;
-  return {p: (dayAmount / monthData.total) * 100, a: dayAmount};
-};
-
-
-
-const getTileColorByPercentage = (percent) => {
-  if (percent === 0) return null;
-  if (percent < 5) return "#e3f2fd";
-  if (percent < 10) return "#90caf9";
-  if (percent < 20) return "#42a5f5";
-  return "#1565c0";
-};
+    const dayAmount = monthData.daily[dateKey] || 0;
+    return { p: (dayAmount / monthData.total) * 100, a: dayAmount };
+  };
 
   return (
-    <Container
-      maxWidth="md"
-      sx={{
-        py: { xs: 2, sm: 4 },
-        px: { xs: 1, sm: 2 },
-      }}
+    <Box
+      className="container-fluid px-3 py-3"
     >
       <Typography
         variant="h5"
@@ -340,236 +327,253 @@ const getTileColorByPercentage = (percent) => {
         Simple daily expense tracker – Python + React + MUI
       </Typography>
 
-      {/* Add / Edit Expense Form */}
-      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }} elevation={3}>
-        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {editingId === null ? "Add Expense" : "Edit Expense"}
-          </Typography>
-          {editingId !== null && (
-            <Box sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
-              <Chip label={`Editing #${editingId}`} size="small" color="secondary" variant="outlined" />
-            </Box>
-          )}
-        </Box>
-
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(4, minmax(0, 1fr))" }, gap: { xs: 1.5, sm: 2 }, alignItems: "center" }}>
-          <TextField label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} InputLabelProps={{ shrink: true }} required fullWidth size="small" />
-          <TextField select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required fullWidth size="small">
-            {DEFAULT_CATEGORIES.map((cat) => (
-              <MenuItem key={cat} value={cat}>
-                {cat}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth size="small" />
-          <TextField label="Amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} inputProps={{ step: "0.01" }} required fullWidth size="small" />
-
-          <Box sx={{ gridColumn: "1 / -1", display: "flex", flexDirection: { xs: "column-reverse", sm: "row" }, justifyContent: "flex-end", gap: 1, mt: { xs: 0.5, sm: 1 } }}>
-            {editingId !== null && (
-              <Button variant="text" onClick={handleCancelEdit} fullWidth={true} sx={{ maxWidth: { xs: "100%", sm: "auto" } }}>
-                Cancel
-              </Button>
-            )}
-            <Button type="submit" variant="contained" fullWidth={true} sx={{ maxWidth: { xs: "100%", sm: "auto" } }}>
-              {editingId === null ? "Add" : "Update"}
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Filters Panel */}
-      <Paper sx={{ p: { xs: 1, sm: 2 }, mb: { xs: 2, sm: 3 } }} elevation={2}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          Filters
-        </Typography>
-        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(5, minmax(0, 1fr))" } }}>
-          <TextField select label="Category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} size="small">
-            <MenuItem value="">All</MenuItem>
-            {DEFAULT_CATEGORIES.map((cat) => (
-              <MenuItem key={cat} value={cat}>
-                {cat}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField select label="Month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} size="small">
-            {MONTHS.map((m) => (
-              <MenuItem key={m.value} value={m.value}>
-                {m.label}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField select label="Year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} size="small">
-            <MenuItem value="">All</MenuItem>
-            {yearOptions.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField label="From" type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-
-          <TextField label="To" type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-
-          <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1, justifyContent: "flex-end" }}>
-            <Button onClick={clearFilters} variant="outlined" size="small">
-              Clear
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Summary (reflects filtered data) */}
-      <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }} elevation={2}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          Summary
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap sx={{ mb: 1 }}>
-          <Chip label={`Total: ₹${totalAmount.toFixed(2)}`} color="primary" variant="filled" size="small" />
-          {/* show per-category totals for filtered data */}
-          {Array.from(
-            filteredExpenses.reduce((map, e) => {
-              const prev = map.get(e.category) || 0;
-              map.set(e.category, prev + Number(e.amount || 0));
-              return map;
-            }, new Map())
-          ).map(([cat, tot]) => (
-            <Chip key={cat} label={`${cat}: ₹${tot.toFixed(2)}`} variant="outlined" size="small" />
-          ))}
-        </Stack>
-        <Typography variant="caption" color="text.secondary">
-          Showing {filteredExpenses.length} of {monthlyExpenses.length} item{monthlyExpenses.length !== 1 ? "s" : ""}
-        </Typography>
-      </Paper>
-
-      {/* pie chart */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-    Expenses by Category
-  </Typography>
-
-  {categoryChartData.length === 0 ? (
-    <Typography variant="caption">No data</Typography>
-  ) : (
-    <ResponsiveContainer width="100%" height={250}>
-      <PieChart>
-        <Pie
-          data={categoryChartData}
-          dataKey="value"
-          nameKey="name"
-          outerRadius={90}
-          label
-        >
-          {categoryChartData.map((_, index) => (
-            <Cell
-              key={index}
-              fill={[
-                "#1976d2",
-                "#9c27b0",
-                "#ff9800",
-                "#4caf50",
-                "#f44336",
-                "#607d8b",
-              ][index % 6]}
-            />
-          ))}
-        </Pie>
-        <Tooltip formatter={(v) => `₹${v.toFixed(2)}`} />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
-  )}
-</Paper>
-
-      {/* calendar view */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-    Monthly Expense Calendar
-  </Typography>
-
-  <Calendar
-  view="month"
-  tileClassName={({ date }) => {
-    const dayData = getDayPercentage(date);
-
-    if (dayData.p >= 20) return "high-spend";
-    if (dayData.p >= 10) return "medium-spend";
-    if (dayData.p >= 5) return "low-spend";
-    if (dayData.p > 0) return "very-low-spend";
-
-    return null;
-  }}
-  tileContent={({ date }) => {
-    const dayData = getDayPercentage(date);
-    if (!dayData.p) return null;
-
-    return (
-      <Box title={`${dayData.p.toFixed(1)}% of monthly spend (₹ ${dayData.a.toFixed(2)})`}>
-        <Typography variant="caption">
-          {dayData.p.toFixed(1)}%
-        </Typography>
-      </Box>
-    );
-  }}
-/>
-
-</Paper>
-
-
-      {/* Expenses Table (shows filteredExpenses) */}
-      <Paper sx={{ p: { xs: 1, sm: 2 } }} elevation={2}>
-        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            Recent Expenses
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ textAlign: { xs: "left", sm: "right" } }}>
-            {loading ? "Loading..." : `${filteredExpenses.length} item${filteredExpenses.length !== 1 ? "s" : ""}`}
-          </Typography>
-        </Box>
-        <Divider sx={{ mb: 1 }} />
-
-        <TableContainer sx={{ maxHeight: { xs: "55vh", sm: "60vh" }, overflowX: "auto" }}>
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ whiteSpace: "nowrap" }}>Date</TableCell>
-                <TableCell sx={{ whiteSpace: "nowrap" }}>Category</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>Amount (₹)</TableCell>
-                <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredExpenses.map((e) => (
-                <TableRow key={e.id} hover onClick={() => handleRowClick(e)} sx={{ cursor: "pointer" }}>
-                  <TableCell>{e.date}</TableCell>
-                  <TableCell>{e.category}</TableCell>
-                  <TableCell sx={{ maxWidth: { xs: 120, sm: "auto" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</TableCell>
-                  <TableCell align="right">{Number(e.amount).toFixed(2)}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" aria-label="edit" onClick={(event) => { event.stopPropagation(); handleEdit(e); }}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" aria-label="delete" onClick={(event) => { event.stopPropagation(); handleDelete(e.id); }}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredExpenses.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    <Typography variant="caption">No expenses for selected filters.</Typography>
-                  </TableCell>
-                </TableRow>
+      <div className="row g-3">
+        <div className="col-12 col-md-6">
+          {/* Add / Edit Expense Form */}
+          <Paper sx={{ p: 2 }}>
+            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                {editingId === null ? "Add Expense" : "Edit Expense"}
+              </Typography>
+              {editingId !== null && (
+                <Box sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
+                  <Chip label={`Editing #${editingId}`} size="small" color="secondary" variant="outlined" />
+                </Box>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+            </Box>
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(4, minmax(0, 1fr))" }, gap: { xs: 1.5, sm: 2 }, alignItems: "center" }}>
+              <TextField label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} InputLabelProps={{ shrink: true }} required fullWidth size="small" />
+              <TextField select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} required fullWidth size="small">
+                {DEFAULT_CATEGORIES.map((cat) => (
+                  <MenuItem key={cat} value={cat}>
+                    {cat}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth size="small" />
+              <TextField label="Amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} inputProps={{ step: "0.01" }} required fullWidth size="small" />
+
+              <Box sx={{ gridColumn: "1 / -1", display: "flex", flexDirection: { xs: "column-reverse", sm: "row" }, justifyContent: "flex-end", gap: 1, mt: { xs: 0.5, sm: 1 } }}>
+                {editingId !== null && (
+                  <Button variant="text" onClick={handleCancelEdit} fullWidth={true} sx={{ maxWidth: { xs: "100%", sm: "auto" } }}>
+                    Cancel
+                  </Button>
+                )}
+                <Button type="submit" variant="contained" fullWidth={true} sx={{ maxWidth: { xs: "100%", sm: "auto" } }}>
+                  {editingId === null ? "Add" : "Update"}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </div>
+
+        <div className="col-12 col-md-6">
+          <Paper sx={{ p: 2 }}>
+            {/* Filters */}
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+              Filters
+            </Typography>
+            <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(5, minmax(0, 1fr))" } }}>
+              <TextField select label="Category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} size="small">
+                <MenuItem value="">All</MenuItem>
+                {DEFAULT_CATEGORIES.map((cat) => (
+                  <MenuItem key={cat} value={cat}>
+                    {cat}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField select label="Month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} size="small">
+                {MONTHS.map((m) => (
+                  <MenuItem key={m.value} value={m.value}>
+                    {m.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField select label="Year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} size="small">
+                <MenuItem value="">All</MenuItem>
+                {yearOptions.map((y) => (
+                  <MenuItem key={y} value={y}>
+                    {y}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField label="From" type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+
+              <TextField label="To" type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+
+              <Box sx={{ gridColumn: "1 / -1", display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                <Button onClick={clearFilters} variant="outlined" size="small">
+                  Clear
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </div>
+      </div>
+      <div className="row g-3 mt-1">
+        <div className="col-12">
+          <Paper sx={{ p: 2 }}>
+            {/* Summary */}
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+              Summary
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap sx={{ mb: 1 }}>
+              <Chip label={`Total: ₹${totalAmount.toFixed(2)}`} color="primary" variant="filled" size="small" />
+              {/* show per-category totals for filtered data */}
+              {Array.from(
+                filteredExpenses.reduce((map, e) => {
+                  const prev = map.get(e.category) || 0;
+                  map.set(e.category, prev + Number(e.amount || 0));
+                  return map;
+                }, new Map())
+              ).map(([cat, tot]) => (
+                <Chip key={cat} label={`${cat}: ₹${tot.toFixed(2)}`} variant="outlined" size="small" />
+              ))}
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              Showing {filteredExpenses.length} of {monthlyExpenses.length} item{monthlyExpenses.length !== 1 ? "s" : ""}
+            </Typography>
+          </Paper>
+        </div>
+      </div>
+
+      <div className="row g-3 mt-1">
+        {/* Table */}
+        <div className="col-12 col-md-6">
+          <Paper sx={{ p: 2 }}>
+            {/* Recent Expenses Table */}
+            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Recent Expenses
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ textAlign: { xs: "left", sm: "right" } }}>
+                {loading ? "Loading..." : `${filteredExpenses.length} item${filteredExpenses.length !== 1 ? "s" : ""}`}
+              </Typography>
+            </Box>
+            <Divider sx={{ mb: 1 }} />
+
+            <TableContainer sx={{ maxHeight: { xs: "55vh", sm: "60vh" }, overflowX: "auto" }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>Date</TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>Category</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>Amount (₹)</TableCell>
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredExpenses.map((e) => (
+                    <TableRow key={e.id} hover onClick={() => handleRowClick(e)} sx={{ cursor: "pointer" }}>
+                      <TableCell>{e.date}</TableCell>
+                      <TableCell>{e.category}</TableCell>
+                      <TableCell sx={{ maxWidth: { xs: 120, sm: "auto" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</TableCell>
+                      <TableCell align="right">{Number(e.amount).toFixed(2)}</TableCell>
+                      <TableCell align="center">
+                        <IconButton size="small" aria-label="edit" onClick={(event) => { event.stopPropagation(); handleEdit(e); }}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" aria-label="delete" onClick={(event) => { event.stopPropagation(); handleDelete(e.id); }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredExpenses.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <Typography variant="caption">No expenses for selected filters.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </div>
+
+        {/* Right side */}
+        <div className="col-12 col-md-6">
+          <div className="d-flex flex-column gap-3">
+            <Paper sx={{ p: 2 }}>
+              {/* Pie Chart */}
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                Expenses by Category
+              </Typography>
+
+              {categoryChartData.length === 0 ? (
+                <Typography variant="caption">No data</Typography>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={categoryChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                      label
+                    >
+                      {categoryChartData.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={[
+                            "#1976d2",
+                            "#9c27b0",
+                            "#ff9800",
+                            "#4caf50",
+                            "#f44336",
+                            "#607d8b",
+                          ][index % 6]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v) => `₹${v.toFixed(2)}`} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </Paper>
+
+            <Paper sx={{ p: 2 }}>
+              {/* Calendar */}
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                Monthly Expense Calendar
+              </Typography>
+
+              <Calendar
+                view="month"
+                tileClassName={({ date }) => {
+                  const dayData = getDayPercentage(date);
+
+                  if (dayData.p >= 20) return "high-spend";
+                  if (dayData.p >= 10) return "medium-spend";
+                  if (dayData.p >= 5) return "low-spend";
+                  if (dayData.p > 0) return "very-low-spend";
+
+                  return null;
+                }}
+                tileContent={({ date }) => {
+                  const dayData = getDayPercentage(date);
+                  if (!dayData.p) return null;
+
+                  return (
+                    <Box title={`${dayData.p.toFixed(1)}% of monthly spend (₹ ${dayData.a.toFixed(2)})`}>
+                      <Typography variant="caption">
+                        {dayData.p.toFixed(1)}%
+                      </Typography>
+                    </Box>
+                  );
+                }}
+              />
+            </Paper>
+          </div>
+        </div>
+      </div>
+
 
       {/* Row Details Dialog */}
       <Dialog open={Boolean(selectedExpense)} onClose={handleCloseDialog} fullWidth maxWidth="xs">
@@ -603,7 +607,7 @@ const getTileColorByPercentage = (percent) => {
           <Button onClick={handleCloseDialog}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 }
 
