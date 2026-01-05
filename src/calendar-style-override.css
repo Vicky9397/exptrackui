@@ -30,4 +30,9 @@
 
 .react-calendar{
   justify-self: center;
+  height: 382.25px;
+}
+
+.react-calendar__tile{
+  height: 57.92px;
 }
