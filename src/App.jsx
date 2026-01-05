@@ -256,6 +256,19 @@ function App() {
     return map;
   }, [filteredExpenses]);
 
+  const calendarDate = useMemo(() => {
+  if (filterYear && filterMonth) {
+    return new Date(`${filterYear}-${filterMonth}-01`);
+  }
+
+  if (filterYear && !filterMonth) {
+    return new Date(`${filterYear}-01-01`);
+  }
+
+  return new Date(); // fallback (current month)
+}, [filterYear, filterMonth]);
+
+
 
   const toLocalDateKey = (date) => {
     const y = date.getFullYear();
@@ -277,6 +290,11 @@ function App() {
     const dayAmount = monthData.daily[dateKey] || 0;
     return { p: (dayAmount / monthData.total) * 100, a: dayAmount };
   };
+
+  const handleCalendarMonthChange = (date) => {
+  setFilterYear(String(date.getFullYear()));
+  setFilterMonth(String(date.getMonth() + 1).padStart(2, "0"));
+};
 
   return (
     <Box
@@ -361,7 +379,11 @@ function App() {
           <div className="d-flex flex-column gap-3">
             <ExpensePieChart categoryChartData={categoryChartData}/>
 
-            <ExpenseCalendar getDayPercentage={getDayPercentage}/>
+            <ExpenseCalendar 
+            getDayPercentage={getDayPercentage} 
+            calendarDate={calendarDate} 
+            onMonthChange={handleCalendarMonthChange}
+            />
           </div>
         </div>
       </div>

@@ -19,6 +19,10 @@ return(
 
               <Calendar
                 view="month"
+                activeStartDate={props.calendarDate}
+                onActiveStartDateChange={({ activeStartDate }) => {
+                  props.onMonthChange(activeStartDate);
+                }}
                 tileClassName={({ date }) => {
                   const dayData = props.getDayPercentage(date);
 

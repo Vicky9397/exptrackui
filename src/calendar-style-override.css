@@ -25,5 +25,9 @@
 
 /* prevent hover from wiping colors */
 .react-calendar__tile:hover {
-  background-color: inherit !important;
+  background-color: #30c000 !important;
+}
+
+.react-calendar{
+  justify-self: center;
 }
