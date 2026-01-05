@@ -19,13 +19,13 @@ return(
                 <Typography variant="caption">No data</Typography>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
+                  <PieChart style={{height: '262px'}}>
                     <Pie
                       data={props.categoryChartData}
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
-                      label
+                      label={({ value }) => `₹${value.toFixed(2)}`}
                     >
                       {props.categoryChartData.map((_, index) => (
                         <Cell
