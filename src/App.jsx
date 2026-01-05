@@ -46,7 +46,6 @@ function App() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [expenses, setExpenses] = useState([]);
-  const [summary, setSummary] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // null = adding new; number = editing that expense id
@@ -78,18 +77,8 @@ function App() {
     }
   };
 
-  const fetchSummary = async () => {
-    try {
-      const res = await api.get("/summary");
-      setSummary(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
     fetchExpenses();
-    fetchSummary();
   }, []);
 
   const resetForm = () => {
@@ -121,7 +110,6 @@ function App() {
       }
 
       await fetchExpenses();
-      await fetchSummary();
       resetForm();
     } catch (err) {
       console.error(err);
@@ -132,7 +120,6 @@ function App() {
     try {
       await api.delete(`/expenses/${id}`);
       await fetchExpenses();
-      await fetchSummary();
       if (editingId === id) {
         resetForm();
       }
