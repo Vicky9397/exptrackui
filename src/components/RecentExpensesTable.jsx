@@ -30,7 +30,7 @@ return(
             </Box>
             <Divider sx={{ mb: 1 }} />
 
-            <TableContainer sx={{ height: { xs: "500px", sm: "708px" }, overflowX: "auto" }}>
+            <TableContainer sx={{ height: { xs: "881.33px", sm: "881.33px" }, overflowX: "auto" }}>
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
