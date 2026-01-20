@@ -11,7 +11,7 @@ import FiltersPanel from "./components/FiltersPanel";
 import SummaryPanel from "./components/SummaryPanel";
 import RecentExpensesTable from "./components/RecentExpensesTable";
 import ExpensePieChart from "./components/ExpensePieChart";
-import ExpenseCalendar from "./components/ExpenseCalendar";
+import CalendarGraphSwitcher from "./components/CalendarGraphSwitcher";
 import ExpenseDetailDialogBox from "./components/ExpenseDetailDialogBox";
 
 
@@ -47,6 +47,9 @@ function App() {
   const [amount, setAmount] = useState("");
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [rightPanelView, setRightPanelView] = useState("calendar");
+// "calendar" | "graph"
+
 
   // null = adding new; number = editing that expense id
   const [editingId, setEditingId] = useState(null);
@@ -268,6 +271,27 @@ function App() {
   return new Date(); // fallback (current month)
 }, [filterYear, filterMonth]);
 
+const dailyGraphData = useMemo(() => {
+  if (!filterYear || !filterMonth) return [];
+
+  return filteredExpenses
+    .filter((e) => {
+      const { year, month } = getYearMonth(e.date);
+      return year === filterYear && month === filterMonth;
+    })
+    .reduce((acc, e) => {
+      const existing = acc.find((d) => d.date === e.date);
+      if (existing) {
+        existing.amount += Number(e.amount || 0);
+      } else {
+        acc.push({ date: e.date, amount: Number(e.amount || 0) });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => a.date.localeCompare(b.date));
+}, [filteredExpenses, filterYear, filterMonth]);
+
+
 
 
   const toLocalDateKey = (date) => {
@@ -379,11 +403,24 @@ function App() {
           <div className="d-flex flex-column gap-3">
             <ExpensePieChart categoryChartData={categoryChartData}/>
 
-            <ExpenseCalendar 
+            {/* <ExpenseCalendar 
             getDayPercentage={getDayPercentage} 
             calendarDate={calendarDate} 
             onMonthChange={handleCalendarMonthChange}
+            /> */}
+            <CalendarGraphSwitcher
+              view={rightPanelView}
+              setView={setRightPanelView}
+              calendarProps={{
+                getDayPercentage,
+                calendarDate,
+                onMonthChange: handleCalendarMonthChange,
+              }}
+              graphProps={{
+                dailyData: dailyGraphData,
+              }}
             />
+
           </div>
         </div>
       </div>
