@@ -19,7 +19,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 const RecentExpensesTable = (props) => {
 return(
     <>
-    <Paper sx={{ p: 2 , height: "881.33px"}}>
+    <Paper sx={{ p: 2 }}>
             <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", mb: 1, gap: { xs: 0.5, sm: 0 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 Recent Expenses
